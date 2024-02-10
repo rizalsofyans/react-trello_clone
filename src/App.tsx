@@ -1,11 +1,14 @@
-import './App.css';
+import { AddNewItem } from './AddNewItem';
+import { Column } from './Column';
+import { AppContainer } from './styles';
 
 function App() {
-  return (
-    <div className="App">
-
-    </div>
-  );
+	return (
+		<AppContainer>
+			<Column text='Todo:' />
+			<AddNewItem toggleButtonText='+ Add another list' onAdd={console.log} />
+		</AppContainer>
+	);
 }
 
 export default App;
