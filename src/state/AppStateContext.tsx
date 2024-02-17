@@ -1,69 +1,49 @@
-import { createContext, useContext, Dispatch, FC, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, Dispatch } from 'react';
+import { save } from '../api';
 import { appStateReducer, AppState, List, Task } from './appStateReducer';
 import { Action } from './actions';
 import { useImmerReducer } from 'use-immer';
-
-const appData: AppState = {
-	lists: [
-		{
-			id: '0',
-			text: 'To Do',
-			tasks: [
-				{
-					id: 'c0',
-					text: 'Deploy to Vercel',
-				},
-			],
-		},
-		{
-			id: '1',
-			text: 'In Progress',
-			tasks: [
-				{
-					id: 'c2',
-					text: 'Add business logic using reducer',
-				},
-			],
-		},
-		{
-			id: '2',
-			text: 'Done',
-			tasks: [
-				{
-					id: 'c3',
-					text: 'Create basic component Trello',
-				},
-			],
-		},
-	],
-};
+import { DragItem } from '../DragItem';
+import { withInitialState } from '../withInitialState';
 
 type AppStateContextProps = {
+	draggedItem: DragItem | null;
 	lists: List[];
 	getTasksByListId(id: string): Task[];
 	dispatch: Dispatch<Action>;
 };
 
-const AppStateContext = createContext<AppStateContextProps>({
-	lists: [],
-	getTasksByListId: () => [],
-	dispatch: () => {}, // Default dispatch function
-});
+const AppStateContext = createContext<AppStateContextProps>(
+	{} as AppStateContextProps
+);
 
-export const useAppState = () => useContext(AppStateContext);
+type AppStateProviderProps = {
+	children: React.ReactNode;
+	initialState: AppState;
+};
 
-export const AppStateProvider: FC<{ children: ReactNode }> = ({ children }) => {
-	const [state, dispatch] = useImmerReducer(appStateReducer, appData);
+export const AppStateProvider = withInitialState<AppStateProviderProps>(
+	({ children, initialState }) => {
+		const [state, dispatch] = useImmerReducer(appStateReducer, initialState);
 
-	const getTasksByListId = (id: string) => {
-		const list = state.lists.find((list) => list.id === id);
-		return list ? list.tasks : [];
-	};
+		useEffect(() => {
+			save(state);
+		}, [state]);
 
-	return (
-		<AppStateContext.Provider
-			value={{ lists: state.lists, getTasksByListId, dispatch }}>
-			{children}
-		</AppStateContext.Provider>
-	);
+		const { draggedItem, lists } = state;
+		const getTasksByListId = (id: string) => {
+			return lists.find((list) => list.id === id)?.tasks || [];
+		};
+
+		return (
+			<AppStateContext.Provider
+				value={{ draggedItem, lists, getTasksByListId, dispatch }}>
+				{children}
+			</AppStateContext.Provider>
+		);
+	}
+);
+
+export const useAppState = () => {
+	return useContext(AppStateContext);
 };
